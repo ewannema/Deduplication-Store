@@ -1,3 +1,73 @@
+===============================================================================
 SUMMARY
+===============================================================================
 
 A program to store large files that saves space by doing block deduplication.
+The files are stored in an application managed repository located at the
+specified path.
+
+Deduplication is done using 10MiB blocks.
+
+===============================================================================
+USAGE
+===============================================================================
+./dedupe_store.py <-r|--repository> location <command>
+
+COMMANDS:
+
+add <file1> <fileN>      add file(s) to the repository
+get <file1> <fileN>      get file(s) from the repository
+init                     initialize the repository
+list                     list files in the repository
+remove <file1> <fileN>   delete file(s) from the repository
+
+===============================================================================
+A QUICK TOUR
+===============================================================================
+# Create some sample files we will use to test
+dd if=/dev/urandom of=block01 bs=1M count=10
+dd if=/dev/urandom of=block02 bs=1M count=10
+dd if=/dev/urandom of=block03 bs=1M count=10
+cat block01 block02 block03 > file01
+cat block01 block01 block03 > file02
+cat block02 block03 block02 block02 > file03
+cat file01 file01 file01 file01 file01 file01 > file04
+cat file01 file02 block01 file03 file02 file01 > file05
+
+# Check out the file sizes
+du -h file0?
+
+# Create a directory to host our repository
+mkdir my_repository_01
+
+# Initialize the repository
+./dedupe_store.py -r my_repository_01 init
+
+# Check the size of the repository
+du -sh my_repository_01
+
+# Add the files
+./dedupe_store.py -r my_repository_01 add file0?
+
+# Show the files in the repository
+./dedupe_store.py -r my_repository_01 list
+
+# Check out the size of the repository. Note that it is smaller than the
+# combined file sizes.
+du -sh my_repository_01
+
+# Compare what is in the repository with what we have on disk.
+for SOURCE
+mv file01 file01.orig
+./dedupe_store.py -r my_repository_01 get file01
+diff file01 file01.orig
+
+# Remove file01 from the repository
+./dedupe_store.py -r my_repository_01 remove file01
+
+# Show the files in the repository
+./dedupe_store.py -r my_repository_01 list
+
+# Clean up our test files
+rm -rf my_repository_01
+rm -f block0? file0? file0?.orig
