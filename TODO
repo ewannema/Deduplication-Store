@@ -1,4 +1,3 @@
-- sqlite filemap table is not referentially integral
-- use transactions in the sqlite code
-- adding duplicate files exceptions
-- remove unused parent directories of removed hashes
+- Tests
+- Schema validation
+- Validate command

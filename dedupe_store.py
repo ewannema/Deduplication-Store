@@ -387,12 +387,13 @@ class MetadataManagerSqlite:
         logging.debug("Removing the metadata for %s", file_name)
         try:
             
+            # This relies on cascading deletes in sqlite to clean up the
+            # filemap table.
             self.cursor.execute('''DELETE FROM files
                                     WHERE file=?''', (file_name,))
             
             # Determine hashes that are no longer used
-            self.cursor.execute('''SELECT hashes.id AS hashid,
-                                    hashes.hash AS hash
+            self.cursor.execute('''SELECT hashes.hash AS hash
                                     FROM hashes
                                     LEFT JOIN filemap
                                     ON hashes.id=filemap.hash
@@ -401,9 +402,12 @@ class MetadataManagerSqlite:
             
             rows = self.cursor.fetchall() 
             hashes = [x['hash'] for x in rows]
-            hash_ids = [(x['hashid'],) for x in rows]
-            self.cursor.executemany('''DELETE FROM hashes
-                                        WHERE id=?''', hash_ids)
+            self.cursor.execute('''DELETE FROM hashes WHERE id in (
+                                    SELECT hashes.id AS hashid
+                                    FROM hashes
+                                    LEFT JOIN filemap
+                                    ON hashes.id=filemap.hash
+                                    WHERE filemap.hash IS NULL)''')
             self.connection.commit()
             return hashes
         
@@ -435,7 +439,6 @@ class MetadataManagerSqlite:
             
             rows = self.cursor.fetchall() 
             hashes = [x['hash'] for x in rows]
-            self.connection.commit()
             return hashes
         
         except Exception:
