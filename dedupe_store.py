@@ -257,7 +257,11 @@ def main():
     if not repository:
         print 'A repository location must be specified.'
         usage()
-        
+
+    if not os.path.exists(repository):
+        print 'The repository does not exist.'
+        exit(2)
+    
     if len(args) < 1:
         print 'A command must be specified.'
         usage()
@@ -297,6 +301,9 @@ class MetadataManagerSqlite:
             
         if validate:
             self.validate_schema()
+            
+        # Turn on foreign key constraints
+        self.cursor.execute('PRAGMA foreign_keys = ON')
             
     def close(self):
         """Close the connection to the sqlite3 database"""
@@ -379,19 +386,9 @@ class MetadataManagerSqlite:
         
         logging.debug("Removing the metadata for %s", file_name)
         try:
-            self.cursor.execute('''SELECT id
-                                    FROM files
-                                    WHERE file=?''', (file_name,))
-            row = self.cursor.fetchone()
-            if row:
-                file_id = row['id']
-            else:
-                return []
             
             self.cursor.execute('''DELETE FROM files
-                                    WHERE id=?''', (file_id,))
-            self.cursor.execute('''DELETE FROM filemap
-                                    WHERE file=?''', (file_id,))
+                                    WHERE file=?''', (file_name,))
             
             # Determine hashes that are no longer used
             self.cursor.execute('''SELECT hashes.id AS hashid,
@@ -471,8 +468,10 @@ class MetadataManagerSqlite:
                         (file INTEGER NOT NULL,
                          hash INTEGER NOT NULL,
                          sequence INTEGER NOT NULL,
-                         FOREIGN KEY (file) REFERENCES files(id),
-                         FOREIGN KEY (hash) REFERENCES hashes(id),
+                         FOREIGN KEY (file) REFERENCES files(id)
+                            ON DELETE CASCADE ON UPDATE RESTRICT,
+                         FOREIGN KEY (hash) REFERENCES hashes(id)
+                            ON DELETE RESTRICT ON UPDATE RESTRICT,
                          PRIMARY KEY (file, hash, sequence))''')
 
         except Exception:
