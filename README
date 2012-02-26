@@ -57,7 +57,6 @@ du -sh my_repository_01
 du -sh my_repository_01
 
 # Compare what is in the repository with what we have on disk.
-for SOURCE
 mv file01 file01.orig
 ./dedupe_store.py -r my_repository_01 get file01
 diff file01 file01.orig
