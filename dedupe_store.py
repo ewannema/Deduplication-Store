@@ -142,7 +142,8 @@ class DedupeStore:
                 
                 logging.debug('Adding metadata for %d hashes.',
                               len(file_hashes))
-                self.metadata_manager.add_file(file_name, file_hashes)
+                self.metadata_manager.add_file(os.path.basename(file_name),
+                                               file_hashes)
     
     def remove(self, args):
         """Remove files from the store."""
@@ -254,7 +255,7 @@ def main():
             logging.exception('UNHANDLED EXCEPTION')
 
 class MetadataManagerSqlite:
-    """A implementation of metadata manager that uses a sqlite3 backend"""
+    """An implementation of metadata manager that uses a sqlite3 backend."""
     
     def __init__(self, repository, dbname='metadata'):
         self.connection = None
