@@ -69,7 +69,7 @@ class DedupeStore:
             elif command == 'remove':
                 self.remove(args)
             elif command == 'get':
-                self.retrieve(args)
+                self.get(args)
             elif command == 'init':
                 self.init()
             else:
@@ -108,6 +108,11 @@ class DedupeStore:
             raise Exception('InvalidCommand')
         
         for file_name in files:
+            short_name = os.path.basename(file_name)
+            if self.metadata_manager.file_exists(short_name):
+                print "%s is already in the repository." % (short_name,)
+                continue
+            
             # Chunk the file
             with open(file_name,'rb') as source_file:
                 data = source_file.read(self.chunk_size)
@@ -142,8 +147,7 @@ class DedupeStore:
                 
                 logging.debug('Adding metadata for %d hashes.',
                               len(file_hashes))
-                self.metadata_manager.add_file(os.path.basename(file_name),
-                                               file_hashes)
+                self.metadata_manager.add_file(short_name, file_hashes)
     
     def remove(self, args):
         """Remove files from the store."""
@@ -154,7 +158,11 @@ class DedupeStore:
             raise Exception('InvalidCommand')
         
         for file_name in files:
-            hashes = self.metadata_manager.remove_file(file_name)
+            short_name = os.path.basename(file_name)
+            if not self.metadata_manager.file_exists(short_name):
+                print "%s is not in the repsitory." % (short_name,)
+                continue
+            hashes = self.metadata_manager.remove_file(short_name)
             
             for file_hash in hashes:
                 file_hash = FileHash(file_hash)
@@ -164,16 +172,17 @@ class DedupeStore:
             
                 #TODO: Remove all empty parent directories
 
-    def retrieve(self, args):
+    def get(self, args):
         """Get files from the store."""
         if len(args) > 1:
             files = args[1:]
         else:
-            print 'No files passed to command: retrieve.'
+            print 'No files passed to command: get.'
             raise Exception('InvalidCommand')
         
         for file_name in files:
-            hashes = self.metadata_manager.get_file(file_name)
+            short_name = os.path.basename(file_name)
+            hashes = self.metadata_manager.get_file(short_name)
             if hashes:
                 with open(file_name, 'wb') as output:
                     for file_hash in hashes:
@@ -183,7 +192,7 @@ class DedupeStore:
                         with open(hash_file, 'rb') as source_file:
                             output.write(source_file.read())
             else:
-                print "File %s not found in the repository." % (file_name, )
+                print "File %s not found in the repository." % (short_name, )
                 
 class FileHash:
     """A helper for operations dealing with file hashes."""
@@ -250,7 +259,7 @@ def main():
             print 'Invalid command specified.'
             usage()
         if err[0] == 'InvalidMetadata':
-            logging.error('The repository metadata is invalid.')
+            logging.error('The repository is invalid. Is it initialized?')
         else:
             logging.exception('UNHANDLED EXCEPTION')
 
@@ -304,7 +313,7 @@ class MetadataManagerSqlite:
                                         WHERE hash=?''', (file_hash,))
                 row = self.cursor.fetchone()
                 if not row:
-                    logging.info('Existing hash not found. Adding it.')
+                    logging.debug('Existing hash not found. Adding it.')
                     self.cursor.execute('''INSERT INTO hashes
                                             (hash)
                                             VALUES (?)''', (file_hash,))
@@ -476,6 +485,10 @@ class MetadataManagerSqlite:
     def upgrade(self):
         """Upgrade the database from a previous version."""
         pass
+    
+    def get_config(self):
+        """Get the configuration information from the database."""
+        return {'schema':'0.2'}
     
 if __name__ == '__main__':
     main()
