@@ -167,10 +167,22 @@ class DedupeStore:
             for file_hash in hashes:
                 file_hash = FileHash(file_hash)
                 logging.debug("Need to remove %s", file_hash.hash_path())
-                
-                os.remove(os.path.join(self.data_dir, file_hash.hash_path()))
+                hash_path = os.path.join(self.data_dir, file_hash.hash_path())
+                os.remove(hash_path)
             
-                #TODO: Remove all empty parent directories
+                logging.debug('Removing unused parent directories of %s',
+                              hash_path)
+                parent = os.path.dirname(hash_path)
+                while parent != self.data_dir:
+                    # Remove the directory if there are no other entries
+                    if not os.listdir(parent):
+                        logging.debug('%s is empty, removing it.', parent)
+                        os.rmdir(parent)
+                    else:
+                        logging.debug('Found other files in %s.', parent)
+                        break
+                    
+                    parent = os.path.dirname(parent)
 
     def get(self, args):
         """Get files from the store."""
