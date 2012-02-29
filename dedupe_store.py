@@ -31,11 +31,11 @@ def usage():
     print 'COMMANDS:'
     print ''
     print 'add <file1> <fileN>      add file(s) to the repository'
-    #print 'validate                    check the repository for issues'
     print 'get <file1> <fileN>      get file(s) from the repository'
     print 'init                     initialize the repository'
     print 'list                     list files in the repository'
     print 'remove <file1> <fileN>   delete file(s) from the repository'
+    #print 'validate                    check the repository for issues'
     print sys.exit(2)
 
 class DedupeStore:
@@ -216,19 +216,22 @@ class FileHash:
         hash_method = hashlib.sha256()
         hash_method.update(data)
         self.file_hash = hash_method.hexdigest()
-        return self.file_hash
+        return self
         
     def hash_path(self, path_break=4):
         """Return a path representing the hash."""
         path = ''
-        for i in range(0, len(self.file_hash)-path_break, path_break):
+        for i in range(0, len(self.file_hash), path_break):
             path = os.path.join(path, self.file_hash[i:i+path_break])
-            
+    
         return path
     
     def hash(self):
         """The hash for the file."""
         return self.file_hash
+    
+    def __str__(self):
+        return self.hash()
         
 def main():
     """Where the fun begins."""

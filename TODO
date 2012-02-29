@@ -1,3 +1,4 @@
 - Tests
 - Schema validation
 - Validate command
+- Reduce potential issues with hash collision
